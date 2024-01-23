@@ -110,3 +110,14 @@ class CA:
                     return i
 
         return transient_length
+    
+    def gen_initial_state_bernoulli(self, L, p=0.5):
+        """
+        Generate a random initial state for the cellular automaton.
+
+        Returns:
+        list: Initial state.
+        """
+        self.L = L
+        self.initial_state = [np.random.choice([0, 1], p=[1 - p, p]) for i in range(self.L)]
+        return self.initial_state
