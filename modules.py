@@ -241,9 +241,6 @@ def run_model(p, L, T, n_repetitions = 100):
     total_jam_sizes = []
 
     for i in range(n_repetitions):
-        p = 0.5
-        L = 1000
-        T = int(L / 2)
         initial_state = ca_184.gen_initial_state_bernoulli(L, p)
         random_walk = initial_to_random_walk(initial_state)
         cellular_automaton = cpl.evolve(initial_state, timesteps=T, memoize=True, apply_rule=lambda n, c, t: cpl.nks_rule(n, rule=184))
