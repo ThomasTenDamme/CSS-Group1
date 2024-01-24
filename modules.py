@@ -1,5 +1,7 @@
 import numpy as np
 import random
+import cellpylib as cpl
+from collections import Counter
 
 class CA:
     """
@@ -128,7 +130,7 @@ class CA:
 
 def find_elem_jams(evolution):
     """
-    A function to find the elementary jams in the evolution of a CA. It checks every row for groupings of 1's that are bigger than 1.
+    A function to find the jams in the evolution of a CA. It checks every row for groupings of 1's that are bigger than 1.
     Then it checks if it can find the same group in the next row, if so, it adds the length of the group to the size of the jam.
     The resulting list contains the starting and ending index of the last row that contained the jams, as well as the size of the jam.
     """
@@ -173,7 +175,7 @@ def initial_to_random_walk(initial_state):
     # Plot the random walk that is the initial state, go up for 1, down for 0
     L = len(initial_state[0])
     random_walk = [0] * L
-    for i in range(1, L):
+    for i in range(L):
         if initial_state[0][i] == 1:
             random_walk[i] = random_walk[i-1] + 1
         else:
@@ -185,20 +187,27 @@ def jam_lifespans(initial_random_walk):
     
     lifespans = []
 
-    for i in range(len(initial_random_walk)):
+    for i in range(len(initial_random_walk) - 1):
         value = initial_random_walk[i]
 
+        # If the next value is higher, we can't calculate the lifespan of a jam from here.
+        if value < initial_random_walk[i + 1]:
+            continue
+        
         # Find the first next occurrence of the value
         try:
             next_occurrence = initial_random_walk[i + 1:].index(value) + i + 1
-            lifespans.append((next_occurrence - i)/2)
-            
             assert initial_random_walk[next_occurrence] == value, "The next occurrence is not the same as the value we are looking for"
-
+        
         except ValueError:
-            pass
-
-
+            continue
+        
+        
+        lifespan = (next_occurrence - i)/2
+        
+        if lifespan > 1:
+            lifespans.append(lifespan)
+            
     return lifespans
 
 def triangulize_evolution(evolution):
@@ -213,4 +222,42 @@ def triangulize_evolution(evolution):
                 evolution[y][x] = 0
     return evolution
 
+def run_model(p, L, T, n_repetitions = 100):
+    """
+    Function to run the model for a given p, L and T. It returns the lifespans and jam sizes of all the jams found in the evolution of the CA.
     
+    Parameters:
+    - p (float): The probability of a cell being 1 in the initial state.
+    - L (int): The length of the CA.
+    - T (int): The number of timesteps.
+    - n_repetitions (int): The number of times the model should be run.
+    
+    Returns:
+    - lifespan_counter (Counter): A counter with the lifespans of all the jams found in the evolutions of the CA.
+    - jam_counter (Counter): A counter with the sizes of all the jams found in the evolutions of the CA.
+    """
+    ca_184 = CA()
+    total_lifespans = []
+    total_jam_sizes = []
+
+    for i in range(n_repetitions):
+        p = 0.5
+        L = 1000
+        T = int(L / 2)
+        initial_state = ca_184.gen_initial_state_bernoulli(L, p)
+        random_walk = initial_to_random_walk(initial_state)
+        cellular_automaton = cpl.evolve(initial_state, timesteps=T, memoize=True, apply_rule=lambda n, c, t: cpl.nks_rule(n, rule=184))
+        cellular_automaton = triangulize_evolution(cellular_automaton)
+
+        lifespans = jam_lifespans(random_walk)
+        total_lifespans += lifespans
+        
+        jams = find_elem_jams(cellular_automaton)
+        jam_sizes = [jam[1] for jam in jams]
+        total_jam_sizes += jam_sizes
+    
+    lifespan_counter = Counter(total_lifespans)
+    jam_counter = Counter(total_jam_sizes)
+    return lifespan_counter, jam_counter
+    
+
