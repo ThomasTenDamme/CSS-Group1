@@ -354,6 +354,7 @@ def run_model_stochastic(p, L, T, n_repetitions=100, v_max=5, p_slowdown=0.1, tr
     Returns:
     - lifespan_counter (Counter): A counter with the lifespans of all the jams found in the evolutions of the model.
     - jam_counter (Counter): A counter with the sizes of all the jams found in the evolutions of the model.
+    - all_evolutions (list): A list containing the evolution of the model for every repetition. Only returned if return_evolutions is True.
     """
     total_lifespans = []
     total_jam_sizes = []
