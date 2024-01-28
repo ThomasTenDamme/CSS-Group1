@@ -339,7 +339,7 @@ def nasch_step(current_state, v_max, p_slowdown):
             
 
 #changed run model function introducing stochasticity/dynamics Influx=Outflux 
-def run_model_stochastic(p, L, T, n_repetitions=100, v_max=5, p_slowdown=0.1, triangular=False, visualize=False):
+def run_model_stochastic(p, L, T, n_repetitions=100, v_max=5, p_slowdown=0.1, triangular=False, visualize=False, return_evolutions=False):
     """
     Function to run the NaSch model for a given p, L, T. It returns the lifespans and jam sizes of all the jams found in the evolution of the model.
 
@@ -358,6 +358,8 @@ def run_model_stochastic(p, L, T, n_repetitions=100, v_max=5, p_slowdown=0.1, tr
     total_lifespans = []
     total_jam_sizes = []
 
+    all_evolutions = []
+
     for i in range(n_repetitions):
         # Create initial state
         initial_state = initial_state_nasch(L, p, v_max)
@@ -367,6 +369,8 @@ def run_model_stochastic(p, L, T, n_repetitions=100, v_max=5, p_slowdown=0.1, tr
         for t in range(T):
             evolution.append(nasch_step(evolution[-1], v_max, p_slowdown))
         
+        all_evolutions.append(evolution)
+
         location_states = np.array([[cell[0] for cell in state] for state in evolution])
 
         if triangular:
@@ -380,6 +384,10 @@ def run_model_stochastic(p, L, T, n_repetitions=100, v_max=5, p_slowdown=0.1, tr
 
     lifespan_counter = Counter(total_lifespans)
     jam_counter = Counter(total_jam_sizes)
+
+    if return_evolutions:
+        return lifespan_counter, jam_counter, all_evolutions
+
     return lifespan_counter, jam_counter
 
 def visualize_jam_counter(jam_counter, fit_line = False):
