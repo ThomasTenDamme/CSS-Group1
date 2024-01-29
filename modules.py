@@ -2,6 +2,7 @@ import random, concurrent.futures, scipy.optimize
 import numpy as np
 import cellpylib as cpl
 import matplotlib.pyplot as plt
+import pandas as pd
 from tqdm import tqdm
 from collections import Counter
 
@@ -272,6 +273,10 @@ def run_model(p, L, T, n_repetitions = 100):
     jam_counter = Counter(total_jam_sizes)
     return lifespan_counter, jam_counter
 
+def run_model_wrapper(args):
+    # Function to run the model with a single argument, so it can be used with concurrent.futures.ProcessPoolExecutor's map function.
+    return run_model(args[0], args[1], args[2], args[3])
+
 def initial_state_nasch(L, p, v_max):
     """
     Function to generate an initial state for the NaSch model. It returns the initial state of the CA.
@@ -414,7 +419,82 @@ def calculate_flow_nasch(evolution):
                 total_flow += speed
     
     return total_flow
+
+def critical_density_wrapper(args):
+    """
+    Function to run the model with a single argument, so it can be used with concurrent.futures.ProcessPoolExecutor's map function.
+
+    Parameters:
+    - args (tuple): A tuple containing the arguments for the run_model_stochastic function. In this order (!): p_values, L, T, n, v_max, p_slowdown
+    """
+    p_values, L, T, n, v_max, p_slowdown = args
+
+    total_flows_per_density = dict()
+    average_flows_per_density = dict()
+
+    for density in p_values:
+
+        _, _, evolutions = run_model_stochastic(density, L, T, n, v_max=v_max, p_slowdown = p_slowdown, return_evolutions=True)
+        
+
+        total_flows = [calculate_flow_nasch(evolution) for evolution in evolutions]
+        average_flows = [flow / float(T) for flow in total_flows]
+        
+        total_flows_per_density[density] = total_flows
+        average_flows_per_density[density] = average_flows
+
+    # Find critical point: the density for which the total flow average is maximum
+    mean_total_flow_per_density = {density: np.mean(flows) for density, flows in total_flows_per_density.items()}
+    critical_density = max(mean_total_flow_per_density, key=mean_total_flow_per_density.get)
+
+    return critical_density
+
+
+def find_critical_dataframe_nasch(p_slowdown_values, v_max_values, p_values, L, T, n):
+    """
+    Function to find critical densities for combinations of p_slowdown and v_max values in the NaSch model. 
+    It returns a dataframe with the critical densities for every combination of p_slowdown and v_max.
+
+    Parameters:
+    - p_slowdown_values (list): The list of p_slowdown values to run the model for.
+    - v_max_values (list): The list of v_max values to run the model for.
+    - p_values (list): The list of density values to run the model for.
+    - L (int): The simulated road length.
+    - T (int): The number of timesteps.
+    - n (int): The number of repetitions.
+
+    Returns:
+    - critical_densities (pandas.DataFrame): A dataframe with the critical densities for every combination of p_slowdown and v_max.
+    """
+
+    # Create a list with inputs for the critical_density_wrapper function
+    args = []
+    for v_max in v_max_values:
+        for p_slowdown in p_slowdown_values:
+            args.append((p_values, L, T, n, v_max, p_slowdown))
+
+    # Run the model for every combination of p_slowdown and v_max
+    with concurrent.futures.ProcessPoolExecutor() as executor:
+        output = list(tqdm(executor.map(critical_density_wrapper, args), total=len(args), desc=f"Finding critical densities, {len(v_max_values)} v_max values and {len(p_slowdown_values)} p_slowdown values"))
     
+    # Create a dataframe with the results
+    v_maxes = []
+    p_slowdowns = []
+    critical_densities = []
+
+    for output, args in zip(output, args):
+        v_maxes.append(args[4])
+        p_slowdowns.append(args[5])
+        critical_densities.append(output)
+    
+    # Create DataFrame
+    output_df = pd.DataFrame({
+        'p_slowdown': p_slowdowns,
+        'v_max': v_maxes,
+        'critical_density': critical_densities
+    })
+
+    return output_df
 
 def visualize_jam_counter(jam_counter, fit_line = False):
     plt.figure(figsize=(12,6))
@@ -451,9 +531,6 @@ def visualize_jam_counter(jam_counter, fit_line = False):
     plt.legend()
     plt.show()
 
-def run_model_wrapper(args):
-    # Function to run the model with a single argument, so it can be used with concurrent.futures.ProcessPoolExecutor's map function.
-    return run_model(args[0], args[1], args[2], args[3])
 
 def run_model_for_densities(p_values, L, T, p_repetitions, n_repetitions, concurrently = True):
     """
