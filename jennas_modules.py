@@ -272,14 +272,15 @@ class Animate:
         plt.loglog(x, y, 'o', markersize=2)
         plt.xlim(0, 1.1*np.max(x))
         plt.ylim(0, 1.1*np.max(y))
-        plt.loglog(x, func(x, a1, b1))
-        plt.loglog(x, func(x, a2, b2))
+        plt.loglog(x, Results.func(x, a1, b1))
+        plt.loglog(x, Results.func(x, a2, b2))
         plt.savefig(f'Animation/fig{index}.png')
 
-    filenames = [f'Animation/fig{index}.png' for index in range(int(len(x_data)*0.2), int(len(x_data)*0.8))]
-    print(filenames)
+    # filenames = [f'Animation/fig{index}.png' for index in range(int(len(x_data)*0.2), int(len(x_data)*0.8))]
+    # print(filenames)
 
-    with imageio.get_writer('Animation/critical_size.gif', mode='I') as writer:      #https://stackoverflow.com/questions/753190/programmatically-generate-video-or-animated-gif-in-python
-        for filename in filenames:
-            image = imageio.imread(filename)
-            writer.append_data(image)
+    # with imageio.get_writer('Animation/critical_size.gif', mode='I') as writer:      #https://stackoverflow.com/questions/753190/programmatically-generate-video-or-animated-gif-in-python
+    #     for filename in filenames:
+    #         image = imageio.imread(filename)
+    #         writer.append_data(image)
+
