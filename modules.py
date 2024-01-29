@@ -335,7 +335,7 @@ def nasch_step(current_state, v_max, p_slowdown):
         
         next_state[i + velocity] = (True, velocity)
 
-    return next_state
+    return current_state, next_state
             
 
 #changed run model function introducing stochasticity/dynamics Influx=Outflux 
@@ -368,7 +368,9 @@ def run_model_stochastic(p, L, T, n_repetitions=100, v_max=5, p_slowdown=0.1, tr
         # Run the model
         evolution = [initial_state]
         for t in range(T):
-            evolution.append(nasch_step(evolution[-1], v_max, p_slowdown))
+            current, next = nasch_step(evolution[-1], v_max, p_slowdown)
+            evolution[-1] = current
+            evolution.append(next)
         
         all_evolutions.append(evolution)
 
@@ -390,6 +392,29 @@ def run_model_stochastic(p, L, T, n_repetitions=100, v_max=5, p_slowdown=0.1, tr
         return lifespan_counter, jam_counter, all_evolutions
 
     return lifespan_counter, jam_counter
+
+
+def calculate_flow_nasch(evolution):
+    """
+    Function to calculate the total flow of the NaSch model. The flow is defined as the 
+    amount of car movement in total. This is calculated by summing the total movement of cars.
+    """
+    total_flow = 0
+    
+    # Check all timesteps but the last one, because we assume that no movement happens in the last timestep
+    for t in range(len(evolution[:-1])):
+        for i in range(len(evolution[t])):
+            speed = evolution[t][i][1]
+            car_present = evolution[t][i][0]
+            if car_present:
+                # assert that there's a car in the cell i + speed in the next timestep
+                if i + speed < len(evolution[t]):
+                    assert evolution[t + 1][i + speed][0], f"There should be a car in the next timestep (error at t = {t}, i = {i}, speed = {speed})"
+                
+                total_flow += speed
+    
+    return total_flow
+    
 
 def visualize_jam_counter(jam_counter, fit_line = False):
     plt.figure(figsize=(12,6))
