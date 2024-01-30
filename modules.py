@@ -420,6 +420,31 @@ def calculate_flow_nasch(evolution):
     
     return total_flow
 
+
+def calculate_delay_nasch(evolution, v_max):
+    """
+    Function to calculate the total delay of the NaSch model. The flow is defined as the
+    amount of difference between v_max and exact speed in total. This is calculated by summing the total delay of cars.
+    """
+    total_delay = 0
+
+    # Check all timesteps but the last one, because we assume that no movement happens in the last timestep
+    for t in range(len(evolution[:-1])):
+        for i in range(len(evolution[t])):
+            speed = evolution[t][i][1]
+            car_present = evolution[t][i][0]
+            if car_present:
+                # assert that there's a car in the cell i + speed in the next timestep
+                if i + speed < len(evolution[t]):
+                    assert evolution[t + 1][i + speed][
+                        0], f"There should be a car in the next timestep (error at t = {t}, i = {i}, speed = {speed})"
+                elem_delay = max(0, v_max - speed)
+                total_delay += elem_delay
+
+    return total_delay
+
+
+
 def critical_density_wrapper(args):
     """
     Function to run the model with a single argument, so it can be used with concurrent.futures.ProcessPoolExecutor's map function.
