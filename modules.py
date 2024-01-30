@@ -377,7 +377,8 @@ def run_model_stochastic(p, L, T, n_repetitions=100, v_max=5, p_slowdown=0.1, tr
             evolution[-1] = current
             evolution.append(next)
         
-        all_evolutions.append(evolution)
+        if return_evolutions:
+            all_evolutions.append(evolution)
 
         location_states = np.array([[cell[0] for cell in state] for state in evolution])
 
