@@ -318,10 +318,12 @@ def nasch_step(current_state, v_max, p_slowdown, dynamic_model=False, neighbourh
             
             # If the cell is empty, there is a chance that a car enters, car has random speed between 1 and v_max
             if not car_present and random.random() < entry_chance * (1 - neighbourhood_density):
+                # print(f"Car appeared at {i}, had probability {entry_chance * (1 - neighbourhood_density)}")
                 current_state[i] = (True, random.randint(1, v_max))
                 
             # If the cell is occupied, there is a chance that a car exits
             elif car_present and random.random() < exit_chance * neighbourhood_density:
+                # print(f"Car disappeared at {i}, had probability {exit_chance * neighbourhood_density}")
                 current_state[i] = (False, 0)
 
     # Acceleration: Increase the speed of each vehicle by 1, up to the maximum speed
@@ -368,7 +370,8 @@ def nasch_step(current_state, v_max, p_slowdown, dynamic_model=False, neighbourh
             
 
 #changed run model function introducing stochasticity/dynamics Influx=Outflux 
-def run_model_stochastic(p, L, T, n_repetitions=100, v_max=5, p_slowdown=0.1, triangular=False, visualize=False, return_evolutions=False):
+def run_model_stochastic(p, L, T, n_repetitions=100, v_max=5, p_slowdown=0.1, triangular=False, return_evolutions=False, 
+                         dynamic_model=False, neighbourhood_size=1, entry_chance=0.5, exit_chance=0.5):
     """
     Function to run the NaSch model for a given p, L, T. It returns the lifespans and jam sizes of all the jams found in the evolution of the model.
 
@@ -397,7 +400,11 @@ def run_model_stochastic(p, L, T, n_repetitions=100, v_max=5, p_slowdown=0.1, tr
         # Run the model
         evolution = [initial_state]
         for t in range(T):
-            current, next = nasch_step(evolution[-1], v_max, p_slowdown)
+            # print()
+            # print(f"Timestep {t}")
+            current, next = nasch_step(evolution[-1], v_max, p_slowdown, dynamic_model=dynamic_model, 
+                                       neighbourhood_size=neighbourhood_size, entry_chance=entry_chance, 
+                                       exit_chance=exit_chance)
             evolution[-1] = current
             evolution.append(next)
         
