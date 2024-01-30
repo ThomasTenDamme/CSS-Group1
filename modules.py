@@ -314,16 +314,16 @@ def nasch_step(current_state, v_max, p_slowdown):
             continue
 
         distance_to_next_car = 0
-        for j in range(i + 1, len(current_state) + 1):
-            # If we reach the end of the road, we set the distance high so the car will leave the simulation
-            if j == len(current_state):
-                distance_to_next_car = len(current_state)
-                break
-            
+        for j in range(i + 1, len(current_state) + 1 + v_max):
+            # If we reach the end of the road, we check for cars at the beginning of the road
+            if j >= len(current_state):
+                # Check for cars at the beginning of the road
+                if current_state[j - len(current_state)][0]:
+                    break
             # If we find a car, we stop counting
-            if current_state[j][0]:
+            elif current_state[j][0]:
                 break
-
+           
             distance_to_next_car += 1
         
         # Reduce the speed to the distance to the next car if it is smaller than the current speed
@@ -335,10 +335,15 @@ def nasch_step(current_state, v_max, p_slowdown):
     # Movement: Move each vehicle forward by its speed
     next_state = [(False, 0)] * len(current_state)
     for i, (car_present, velocity) in enumerate(current_state):
-        if not car_present or i + velocity >= len(current_state):
+        # If there is no car in the cell, we don't have to do anything
+        if not car_present:
             continue
         
-        next_state[i + velocity] = (True, velocity)
+        # If the car is at the end of the road, it re-enters at the beginning
+        if i + velocity >= len(current_state):
+            next_state[i + velocity - len(current_state)] = (True, velocity)
+        else:
+            next_state[i + velocity] = (True, velocity)
 
     return current_state, next_state
             
