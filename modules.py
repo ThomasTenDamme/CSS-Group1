@@ -292,18 +292,37 @@ def initial_state_nasch(L, p, v_max):
     initial_state = [(False, 0) if random.random() > p else (True, random.randint(1, v_max)) for _ in range(L)]
     return initial_state
 
-def nasch_step(current_state, v_max, p_slowdown):
+def nasch_step(current_state, v_max, p_slowdown, dynamic_model=False, neighbourhood_size=1, entry_chance=0.5, exit_chance=0.5):
     """
-    Function to perform a single timestep of the NaSch model. It returns the next state of the CA.
+    Function to perform a single timestep of the NaSch model. It returns the next state of the CA. Start with the potential dynamics of the model.
+    Then perform the acceleration, slowing down, randomization and movement steps.
 
     Parameters:
     - current_state (list): The current state of the CA. It contains a tuple for every cell, with the first element indicating whether the cell is occupied and the second element indicating the speed of the vehicle.
     - v_max (int): Maximum speed of vehicles.
     - p_slowdown (float): Probability of slowing down.
+    - dynamic_model (bool): Whether or not to use the dynamic model.
+    - neighbourhood_size (int): The size of the neighbourhood for the dynamic model. Number of cars in front of cell that influences entry or exit probability.
+    - entry_chance (float): The probability of a car entering in a completely empty neighbourhood (scales down with fuller neighbourhoods).
+    - exit_chance (float): The probability of a car exiting in a completely full neighbourhood (scales down with emptier neighbourhoods).
 
     Returns:
     - next_state (list): The next state of the CA. Same format as current_state.
     """
+
+    # Start with the potential dynamics of the model (influx and outflux):
+    if dynamic_model:
+        # Loop over cells from left to right, that way newly changed cells don't influence the next cells
+        for i, (car_present, velocity) in enumerate(current_state):
+            neighbourhood_density = np.mean([current_state[(i + j) % len(current_state)][0] for j in range(neighbourhood_size)])
+            
+            # If the cell is empty, there is a chance that a car enters, car has random speed between 1 and v_max
+            if not car_present and random.random() < entry_chance * (1 - neighbourhood_density):
+                current_state[i] = (True, random.randint(1, v_max))
+                
+            # If the cell is occupied, there is a chance that a car exits
+            elif car_present and random.random() < exit_chance * neighbourhood_density:
+                current_state[i] = (False, 0)
 
     # Acceleration: Increase the speed of each vehicle by 1, up to the maximum speed
     current_state = [(x[0], min(x[1] + 1, v_max)) for x in current_state]
@@ -418,10 +437,6 @@ def calculate_flow_nasch(evolution):
             speed = evolution[t][i][1]
             car_present = evolution[t][i][0]
             if car_present:
-                # assert that there's a car in the cell i + speed in the next timestep
-                if i + speed < len(evolution[t]):
-                    assert evolution[t + 1][i + speed][0], f"There should be a car in the next timestep (error at t = {t}, i = {i}, speed = {speed})"
-                
                 total_flow += speed
     
     return total_flow
@@ -481,7 +496,7 @@ def critical_density_wrapper(args):
     return critical_density
 
 
-def find_critical_dataframe_nasch(p_slowdown_values, v_max_values, p_values, L, T, n):
+def find_critical_dataframe_nasch(p_slowdown_values, v_max_values, p_values, L, T, n, repetitions=1):
     """
     Function to find critical densities for combinations of p_slowdown and v_max values in the NaSch model. 
     It returns a dataframe with the critical densities for every combination of p_slowdown and v_max.
@@ -505,18 +520,21 @@ def find_critical_dataframe_nasch(p_slowdown_values, v_max_values, p_values, L, 
             args.append((p_values, L, T, n, v_max, p_slowdown))
 
     # Run the model for every combination of p_slowdown and v_max
-    with concurrent.futures.ProcessPoolExecutor() as executor:
-        output = list(tqdm(executor.map(critical_density_wrapper, args), total=len(args), desc=f"Finding critical densities, {len(v_max_values)} v_max values and {len(p_slowdown_values)} p_slowdown values"))
-    
+    outputs = []
+    for i in range(repetitions):
+        with concurrent.futures.ProcessPoolExecutor() as executor:
+            output = list(tqdm(executor.map(critical_density_wrapper, args), total=len(args), desc=f"Finding critical densities (Repetition {i + 1} of {repetitions})"))
+            outputs.append(output)
+        
     # Create a dataframe with the results
     v_maxes = []
     p_slowdowns = []
     critical_densities = []
 
-    for output, args in zip(output, args):
+    for i, args in enumerate(args):
         v_maxes.append(args[4])
         p_slowdowns.append(args[5])
-        critical_densities.append(output)
+        critical_densities.append([output[i] for output in outputs])
     
     # Create DataFrame
     output_df = pd.DataFrame({
