@@ -6,61 +6,132 @@ import pandas as pd
 from tqdm import tqdm
 from collections import Counter
 
-def find_jams(evolution, add_lifespans = False):
-    """
-    A function to find the jams in the evolution of a CA. It checks every row for groupings of 1's that are bigger than 1.
-    Then it checks if it can find the same group in the next row, if so, it adds the length of the group to the size of the jam.
-    The resulting list contains the starting and ending index of the last row that contained the jams, as well as the size of the jam.
+# def find_jams(evolution, add_lifespans = False):
+#     """
+#     A function to find the jams in the evolution of a CA. It checks every row for groupings of 1's that are bigger than 1.
+#     Then it checks if it can find the same group in the next row, if so, it adds the length of the group to the size of the jam.
+#     The resulting list contains the starting and ending index of the last row that contained the jams, as well as the size of the jam.
 
-    Parameters:
-    - evolution (list): The evolution of the CA.
-    - add_lifespans (bool): Whether or not to add the lifespans of the jams to the result.
+#     Parameters:
+#     - evolution (list): The evolution of the CA.
+#     - add_lifespans (bool): Whether or not to add the lifespans of the jams to the result.
 
-    Returns:
-    - result (list): A list containing the starting and ending index of the last row that contained the jams, as well as the size of the jam. If add_lifespans is True, it also contains the lifespans of the jams.
-    """
+#     Returns:
+#     - result (list): A list containing the starting and ending index of the last row that contained the jams, as well as the size of the jam. If add_lifespans is True, it also contains the lifespans of the jams.
+#     """
 
-    def row_jams(row):
-        result = []
-        start = None
+#     def row_jams(row):
+#         result = []
+#         start = None
 
-        for i, value in enumerate(row):
-            if value == 1:
-                if start is None:
-                    start = i
-            elif value == 0 and start is not None:
-                if i - start >= 2:  # Check if the group has at least two 1's
-                    result.append([start, i - 1])
-                start = None
+#         for i, value in enumerate(row):
+#             if value == 1:
+#                 if start is None:
+#                     start = i
+#             elif value == 0 and start is not None:
+#                 if i - start >= 2:  # Check if the group has at least two 1's
+#                     result.append([start, i - 1])
+#                 start = None
 
-        # Check if the last group extends to the end of the list
-        if start is not None and len(row) - start >= 2:
-            result.append([start, len(row) - 1])
+#         # Check if the last group extends to the end of the list
+#         if start is not None and len(row) - start >= 2:
+#             result.append([start, len(row) - 1])
 
-        return result
+#         return result
 
-    previous_jams = [[x, x[1] - x[0] + 1] for x in row_jams(evolution[0])]
-    lifespans = [1] * len(previous_jams)
+#     previous_jams = [[x, x[1] - x[0] + 1] for x in row_jams(evolution[0])]
+#     lifespans = [1] * len(previous_jams)
 
-    for row in evolution[1:]:
-        current_jams = row_jams(row)
+#     for row in evolution[1:]:
+#         current_jams = row_jams(row)
 
-        # The rightmost cell of every previous jam should now be one cell to the left in the current jam
-        for i, jam in enumerate(previous_jams):
-            right_cell = jam[0][1]
+#         # The rightmost cell of every previous jam should now be one cell to the left in the current jam
+#         for i, jam in enumerate(previous_jams):
+#             right_cell = jam[0][1]
             
-            # find the jam in the current jams that has the rightmost cell one cell to the left
-            for current_jam in current_jams:
-                if current_jam[1] == right_cell - 1:
-                    previous_jams[i][1] += current_jam[1] - current_jam[0] + 1
-                    previous_jams[i][0] = current_jam
-                    lifespans[i] += 1
-                    break
+#             # find the jam in the current jams that has the rightmost cell one cell to the left
+#             for current_jam in current_jams:
+#                 if current_jam[1] == right_cell - 1:
+#                     previous_jams[i][1] += current_jam[1] - current_jam[0] + 1
+#                     previous_jams[i][0] = current_jam
+#                     lifespans[i] += 1
+#                     break
     
-    if add_lifespans:
-        return previous_jams, lifespans
+#     jam_sizes = [jam[1] for jam in previous_jams]
+    
+#     if add_lifespans:
+#         return jam_sizes, lifespans
 
-    return previous_jams
+#     return jam_sizes
+
+def find_jams(evolution, add_lifespans = False):
+    def dfs(i, j, cluster):
+        if 0 <= i < len(evolution) and -len(evolution[0]) < j < len(evolution[0]) and evolution[i][j]:
+            evolution[i][j] = False
+            cluster['size'] += 1
+            cluster['lifespan'] = max(cluster['lifespan'], i)
+            
+            # Explore neighbors
+            dfs(i + 1, j, cluster)
+            dfs(i - 1, j, cluster)
+            dfs(i, j + 1, cluster)
+            dfs(i, j - 1, cluster)
+
+    evolution = [row[:] for row in evolution]  # Make a copy of the evolution, so we don't change the original matrix
+    
+    jams = {'size': [], 'lifespan': []}
+
+    for i in range(len(evolution)):
+        for j in range(len(evolution[0])):
+            if evolution[i][j]:
+                jam = {'size': 0, 'lifespan': 0}
+                dfs(i, j, jam)
+                if jam['size'] > 1:
+                    jam['lifespan'] = max(1, jam['lifespan'] - i + 1)
+                    jams['size'].append(jam['size'])
+                    jams['lifespan'].append(jam['lifespan'])
+
+    if add_lifespans:
+        return jams['size'], jams['lifespan']
+    return jams['size']
+
+def test_new_jam_finder():
+    # Example usage:
+    evolution = [
+        [False, False, True, False],
+        [True, True, False, False],
+        [False, True, True, False],
+        [False, False, False, True]
+    ]
+
+    jam_sizes, jam_lifespans = find_jams_new(evolution, add_lifespans=True)
+
+    print("Cluster Sizes:", jam_sizes)
+    print("Cluster Lifespans:", jam_lifespans)
+    
+    # plot the car evolution
+    fig, ax = plt.subplots(figsize=(12, 6))  # Adjust the size as needed
+    cpl.plot(np.array(evolution), colormap='GnBu')
+    
+    # Example usage:
+    evolution = [
+        [False, True, False, True, False],
+        [True, True, False, True, False],
+        [True, False, False, False, True],
+        [True, False, False, False, True],
+        [False, False, False, True, True]
+    ]
+
+    jam_sizes, jam_lifespans = find_jams_new(evolution, add_lifespans=True)
+
+    print("Cluster Sizes:", jam_sizes)
+    print("Cluster Lifespans:", jam_lifespans)
+    
+    # plot the car evolution
+    fig, ax = plt.subplots(figsize=(12, 6))  # Adjust the size as needed
+    cpl.plot(np.array(evolution), colormap='GnBu')
+    
+    
 
 def gen_initial_state_bernoulli(L, p):
     """
@@ -152,8 +223,7 @@ def run_model(p, L, T, n_repetitions = 100):
         lifespans = jam_lifespans(random_walk)
         total_lifespans += lifespans
         
-        jams = find_jams(cellular_automaton)
-        jam_sizes = [jam[1] for jam in jams]
+        jam_sizes = find_jams(cellular_automaton)
         total_jam_sizes += jam_sizes
     
     lifespan_counter = Counter(total_lifespans)
@@ -309,9 +379,8 @@ def run_model_stochastic(p, L, T, n_repetitions=100, v_max=5, p_slowdown=0.1, tr
         if triangular:
             location_states = triangulize_evolution(location_states)
 
-        jams, lifespans = find_jams(location_states, add_lifespans=True)
+        jam_sizes, lifespans = find_jams(location_states, add_lifespans=True)
         
-        jam_sizes = [jam[1] for jam in jams]
         total_jam_sizes += jam_sizes
         total_lifespans += lifespans
 
@@ -569,8 +638,3 @@ def visualize_jam_counter(jam_counter, fit_line = False):
 #     plt.show()
 
 #     return results_dict
-        
-
-        
-
-
