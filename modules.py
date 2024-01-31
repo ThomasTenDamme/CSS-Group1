@@ -104,7 +104,7 @@ def test_new_jam_finder():
         [False, False, False, True]
     ]
 
-    jam_sizes, jam_lifespans = find_jams_new(evolution, add_lifespans=True)
+    jam_sizes, jam_lifespans = find_jams(evolution, add_lifespans=True)
 
     print("Cluster Sizes:", jam_sizes)
     print("Cluster Lifespans:", jam_lifespans)
@@ -122,7 +122,7 @@ def test_new_jam_finder():
         [False, False, False, True, True]
     ]
 
-    jam_sizes, jam_lifespans = find_jams_new(evolution, add_lifespans=True)
+    jam_sizes, jam_lifespans = find_jams(evolution, add_lifespans=True)
 
     print("Cluster Sizes:", jam_sizes)
     print("Cluster Lifespans:", jam_lifespans)
@@ -417,6 +417,7 @@ def calculate_delay_nasch(evolution, v_max):
     amount of difference between v_max and exact speed in total. This is calculated by summing the total delay of cars.
     """
     total_delay = 0
+    car_num=0
 
     # Check all timesteps but the last one, because we assume that no movement happens in the last timestep
     for t in range(len(evolution[:-1])):
@@ -425,9 +426,19 @@ def calculate_delay_nasch(evolution, v_max):
             car_present = evolution[t][i][0]
             if car_present:
                 elem_delay = max(0, v_max - speed)
+                car_num += 1
                 total_delay += elem_delay
 
-    return total_delay
+    if car_num==0:
+        car_num=1
+        mean_delay=total_delay/car_num
+        return mean_delay
+
+    else:
+        mean_delay = total_delay/car_num
+
+
+    return mean_delay
 
 
 
