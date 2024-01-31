@@ -6,131 +6,6 @@ import pandas as pd
 from tqdm import tqdm
 from collections import Counter
 
-class CA:
-    """
-    Cellular Automaton (CA) class for simulating one-dimensional cellular automata.
-
-    Attributes:
-    - L (int): Length of the automaton.
-    - r (int): Radius of the neighborhood.
-    - k (int): Number of possible cell states.
-    - dec_rule (int): Decimal representation of the rule.
-    - t_end (int): Number of time steps.
-    - s_q (str): Quiescent state for lambda parameter calculation.
-    - initial_state (list): Initial state of the automaton.
-
-    Methods:
-    - gen_CA(L, r, k, dec_rule, t_end, s_q, initial_state=False):
-        Generate the evolution of the cellular automaton together with the value for lambda.
-
-    - calculate_transient_length():
-        Calculate the transient length of the cellular automaton.
-
-    Usage:
-    # Create an instance of the CA class
-    ca_instance = CA()
-
-    # Generate the evolution of the automaton
-    result, evolution = ca_instance.gen_CA(L, r, k, dec_rule, t_end, s_q, initial_state=)
-
-    # Calculate the transient length
-    transient_length = ca_instance.calculate_transient_length()
-    """
-
-    def __init__(self):
-        """
-        Initialize the Cellular Automaton (CA) instance with default values.
-        """
-        self.L = 0
-        self.r = 0
-        self.k = 0
-        self.dec_rule = 0
-        self.t_end = 0
-        self.s_q = "0"
-        self.initial_state = False
-        self.evolution = None
-
-    def gen_CA(self, L, r, k, dec_rule, t_end, s_q, initial_state=False):
-        """
-        Generate the evolution of the cellular automaton.
-
-        Returns:
-        Tuple: lambda_parameter (float), evolution (numpy.ndarray)
-        """
-        self.L = L
-        self.r = r
-        self.k = k
-        self.dec_rule = dec_rule
-        self.t_end = t_end
-        self.s_q = s_q
-        self.initial_state = initial_state
-        self.evolution = np.zeros((t_end + 1, L))
-
-        if initial_state == False:
-            self.initial_state = [(random.randint(0, k - 1)) for i in range(L)]
-
-        if k > 2:
-            bin_rule_short = np.base_repr(dec_rule, base=k)[2:]
-        else:
-            bin_rule_short = bin(dec_rule)[2:]
-
-        num_zeroes = (k ** (2 * r + 1)) - len(bin_rule_short)
-        bin_rule = "0" * num_zeroes + bin_rule_short
-
-        old_state = self.initial_state
-
-        for t in range(t_end + 1):
-            self.evolution[t] = old_state
-            new_state = [0] * L
-
-            for i in range(L):
-                previous_values = []
-                for j in range(2 * r + 1):
-                    previous_values.append(np.take(old_state, i - r + j, mode='wrap'))
-
-                string_previous_values = ''.join(str(x) for x in previous_values)
-                rule_previous_values = int(string_previous_values, k)
-                new_value = bin_rule[-(rule_previous_values + 1)]
-
-                new_state[i] = int(new_value)
-
-            old_state = new_state
-        
-        lambda_parameter = 1 - ((k ** (2 * r + 1) - bin_rule_short.count(s_q)) / (k ** (2 * r + 1)))
-
-        return lambda_parameter, self.evolution
-
-    def calculate_transient_length(self):
-        """
-        Calculate the transient length of the cellular automaton.
-
-        Returns:
-        int or str: Transient length or 'no transient found'.
-        """
-        transient_length = 'no transient found'
-
-        for i in range(1, len(self.evolution)):
-            for j in range(i):
-                if np.array_equal(self.evolution[i], self.evolution[j]):
-                    return i
-
-        return transient_length
-    
-    def gen_initial_state_bernoulli(self, L, p):
-        """
-        Generate a random initial state for the cellular automaton. Bernoulli distribution.
-
-        Returns:
-        list: Initial state.
-        """
-        assert p >= 0 and p <= 1, "p must be between 0 and 1"
-        assert L > 0, "L must be greater than 0"
-
-        self.L = L
-        self.initial_state = np.array([[np.random.choice([0, 1], p=[1 - p, p]) for i in range(self.L)]])
-        return self.initial_state
-
-
 def find_jams(evolution, add_lifespans = False):
     """
     A function to find the jams in the evolution of a CA. It checks every row for groupings of 1's that are bigger than 1.
@@ -186,6 +61,19 @@ def find_jams(evolution, add_lifespans = False):
         return previous_jams, lifespans
 
     return previous_jams
+
+def gen_initial_state_bernoulli(L, p):
+    """
+    Generate a random initial state for the cellular automaton. Bernoulli distribution.
+
+    Returns:
+    list: Initial state.
+    """
+    assert p >= 0 and p <= 1, "p must be between 0 and 1"
+    assert L > 0, "L must be greater than 0"
+
+    initial_state = np.array([[np.random.choice([0, 1], p=[1 - p, p]) for i in range(L)]])
+    return initial_state
 
 def initial_to_random_walk(initial_state):
     # Plot the random walk that is the initial state, go up for 1, down for 0
@@ -252,12 +140,11 @@ def run_model(p, L, T, n_repetitions = 100):
     - lifespan_counter (Counter): A counter with the lifespans of all the jams found in the evolutions of the CA.
     - jam_counter (Counter): A counter with the sizes of all the jams found in the evolutions of the CA.
     """
-    ca_184 = CA()
     total_lifespans = []
     total_jam_sizes = []
 
     for _ in range(n_repetitions):
-        initial_state = ca_184.gen_initial_state_bernoulli(L, p)
+        initial_state = gen_initial_state_bernoulli(L, p)
         random_walk = initial_to_random_walk(initial_state)
         cellular_automaton = cpl.evolve(initial_state, timesteps=T, memoize=True, apply_rule=lambda n, c, t: cpl.nks_rule(n, rule=184))
         cellular_automaton = triangulize_evolution(cellular_automaton)
@@ -273,9 +160,9 @@ def run_model(p, L, T, n_repetitions = 100):
     jam_counter = Counter(total_jam_sizes)
     return lifespan_counter, jam_counter
 
-def run_model_wrapper(args):
-    # Function to run the model with a single argument, so it can be used with concurrent.futures.ProcessPoolExecutor's map function.
-    return run_model(args[0], args[1], args[2], args[3])
+# def run_model_wrapper(args):
+#     # Function to run the model with a single argument, so it can be used with concurrent.futures.ProcessPoolExecutor's map function.
+#     return run_model(args[0], args[1], args[2], args[3])
 
 def initial_state_nasch(L, p, v_max):
     """
@@ -382,6 +269,12 @@ def run_model_stochastic(p, L, T, n_repetitions=100, v_max=5, p_slowdown=0.1, tr
     - n_repetitions (int): The number of times the model should be run.
     - v_max (int): Maximum speed of vehicles.
     - p_slowdown (float): Probability of slowing down.
+    - triangular (bool): Whether or not to triangulize the evolution.
+    - return_evolutions (bool): Whether or not to return the evolution of the model.
+    - dynamic_model (bool): Whether or not to use the dynamic model.
+    - neighbourhood_size (int): The size of the neighbourhood for the dynamic model. Number of cars in front of cell that influences entry or exit probability.
+    - entry_chance (float): The probability of a car entering in a completely empty neighbourhood (scales down with fuller neighbourhoods).
+    - exit_chance (float): The probability of a car exiting in a completely full neighbourhood (scales down with emptier neighbourhoods).
 
     Returns:
     - lifespan_counter (Counter): A counter with the lifespans of all the jams found in the evolutions of the model.
@@ -434,7 +327,7 @@ def run_model_stochastic(p, L, T, n_repetitions=100, v_max=5, p_slowdown=0.1, tr
 def calculate_flow_nasch(evolution):
     """
     Function to calculate the total flow of the NaSch model. The flow is defined as the 
-    amount of car movement in total. This is calculated by summing the total movement of cars.
+    amount of car movement in total. This is calculated by summing the speeds of cars over every timestep.
     """
     total_flow = 0
     
@@ -462,10 +355,6 @@ def calculate_delay_nasch(evolution, v_max):
             speed = evolution[t][i][1]
             car_present = evolution[t][i][0]
             if car_present:
-                # assert that there's a car in the cell i + speed in the next timestep
-                if i + speed < len(evolution[t]):
-                    assert evolution[t + 1][i + speed][
-                        0], f"There should be a car in the next timestep (error at t = {t}, i = {i}, speed = {speed})"
                 elem_delay = max(0, v_max - speed)
                 total_delay += elem_delay
 
@@ -588,98 +477,98 @@ def visualize_jam_counter(jam_counter, fit_line = False):
     plt.show()
 
 
-def run_model_for_densities(p_values, L, T, p_repetitions, n_repetitions, concurrently = True):
-    """
-    Function to run the model for a given list of p values, L and T. It fits a power law to the data and returns p_repetitions fitted exponents for every p value.
+# def run_model_for_densities(p_values, L, T, p_repetitions, n_repetitions, concurrently = True):
+#     """
+#     Function to run the model for a given list of p values, L and T. It fits a power law to the data and returns p_repetitions fitted exponents for every p value.
 
-    Parameters:
-    - p_values (list): The list of p values to run the model for.
-    - L (int): The length of the CA.
-    - T (int): The number of timesteps.
-    - p_repetitions (int): The number of times the model should be run for each p value.
-    - n_repetitions (int): The number of times the model should be run to estimate the exponent once.
-    - concurrently (bool): Whether or not to run the model concurrently.
+#     Parameters:
+#     - p_values (list): The list of p values to run the model for.
+#     - L (int): The length of the CA.
+#     - T (int): The number of timesteps.
+#     - p_repetitions (int): The number of times the model should be run for each p value.
+#     - n_repetitions (int): The number of times the model should be run to estimate the exponent once.
+#     - concurrently (bool): Whether or not to run the model concurrently.
 
-    Returns:
-    TODO
-    """
+#     Returns:
+#     TODO
+#     """
 
-    # with concurrent.futures.ProcessPoolExecutor() as executor:
-    #     results = tqdm_parallel_map(executor, assigned_material_job, job_ids)
+#     # with concurrent.futures.ProcessPoolExecutor() as executor:
+#     #     results = tqdm_parallel_map(executor, assigned_material_job, job_ids)
 
-    results_dict = {}
+#     results_dict = {}
 
-    for p in p_values:
-        print(f"Running model for p = {p}")
-        results_dict[p] = []
+#     for p in p_values:
+#         print(f"Running model for p = {p}")
+#         results_dict[p] = []
 
-        args = [(p, L, T, n_repetitions)] * p_repetitions
+#         args = [(p, L, T, n_repetitions)] * p_repetitions
 
-        if not concurrently:
-            raise NotImplementedError("Consecutive version not implemented yet")
+#         if not concurrently:
+#             raise NotImplementedError("Consecutive version not implemented yet")
 
-        if concurrently:
-            with concurrent.futures.ProcessPoolExecutor() as executor:
-                output = list(tqdm(executor.map(run_model_wrapper, args), total=len(args)))
+#         if concurrently:
+#             with concurrent.futures.ProcessPoolExecutor() as executor:
+#                 output = list(tqdm(executor.map(run_model_wrapper, args), total=len(args)))
 
-                # Now for every output, we have two counters. From the jam size counter we want to fit an exponent
-                for out in output:
-                    jam_counter = out[1]
+#                 # Now for every output, we have two counters. From the jam size counter we want to fit an exponent
+#                 for out in output:
+#                     jam_counter = out[1]
                     
                     
 
-                    lists = sorted(jam_counter.items())
-                    x, y = zip(*lists)
-                    x_log, y_log = np.log(x), np.log(y)
+#                     lists = sorted(jam_counter.items())
+#                     x, y = zip(*lists)
+#                     x_log, y_log = np.log(x), np.log(y)
 
-                    # Fit linear function to log-log data   
-                    def func(x, a, b):
-                        return -a * x + b
+#                     # Fit linear function to log-log data   
+#                     def func(x, a, b):
+#                         return -a * x + b
                     
-                    test_index = int(len(x_log) * 0.8)
+#                     test_index = int(len(x_log) * 0.8)
 
-                    popt, _ = scipy.optimize.curve_fit(func, x_log[:test_index], y_log[:test_index], p0=[1, 0.5])
-                    a_optimal, _ = popt
+#                     popt, _ = scipy.optimize.curve_fit(func, x_log[:test_index], y_log[:test_index], p0=[1, 0.5])
+#                     a_optimal, _ = popt
 
-                    results_dict[p].append(a_optimal)
+#                     results_dict[p].append(a_optimal)
 
-                    # visualize_jam_counter(jam_counter, fit_line = True)
+#                     # visualize_jam_counter(jam_counter, fit_line = True)
 
-                    # visualize_jam_counter(jam_counter, fit_line = False)
+#                     # visualize_jam_counter(jam_counter, fit_line = False)
 
-                    # lists = sorted(jam_counter.items())
-                    # x, y = zip(*lists)
+#                     # lists = sorted(jam_counter.items())
+#                     # x, y = zip(*lists)
 
-                    # # Fit power-law function
-                    # def func(x, a, b):
-                    #     return a * x ** -b
+#                     # # Fit power-law function
+#                     # def func(x, a, b):
+#                     #     return a * x ** -b
 
-                    # popt, _ = scipy.optimize.curve_fit(func, x, y, p0=[1, 0.5])
-                    # _, b_optimal = popt
+#                     # popt, _ = scipy.optimize.curve_fit(func, x, y, p0=[1, 0.5])
+#                     # _, b_optimal = popt
 
-                    # results_dict[p].append(b_optimal)
+#                     # results_dict[p].append(b_optimal)
         
-        print(f"Results for p = {p}: {results_dict[p]}")
+#         print(f"Results for p = {p}: {results_dict[p]}")
     
-    # Visualize exponents for every p value
-    plt.figure(figsize=(12,6))
-    plt.title(f'Exponent for every p value')
-    plt.plot(p_values, results_dict.values(), 'o')
-    plt.xlabel('p')
-    plt.ylabel('Exponent')
+#     # Visualize exponents for every p value
+#     plt.figure(figsize=(12,6))
+#     plt.title(f'Exponent for every p value')
+#     plt.plot(p_values, results_dict.values(), 'o')
+#     plt.xlabel('p')
+#     plt.ylabel('Exponent')
 
-    # # Fit line through p_values and exponents 
-    # def func(x, a, b):
-    #     return a * x + b
+#     # # Fit line through p_values and exponents 
+#     # def func(x, a, b):
+#     #     return a * x + b
     
-    # popt, _ = scipy.optimize.curve_fit(func, x, y, p0=[1, 0.5])
-    # a_optimal, b_optimal = popt
+#     # popt, _ = scipy.optimize.curve_fit(func, x, y, p0=[1, 0.5])
+#     # a_optimal, b_optimal = popt
 
-    # plt.plot(x, func(x, a_optimal, b_optimal), label=f'Linear fit: y = {a_optimal:.2f}x + {b_optimal:.2f}')
+#     # plt.plot(x, func(x, a_optimal, b_optimal), label=f'Linear fit: y = {a_optimal:.2f}x + {b_optimal:.2f}')
     
-    plt.show()
+#     plt.show()
 
-    return results_dict
+#     return results_dict
         
 
         
