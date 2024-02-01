@@ -155,9 +155,13 @@ def run_model(p, L, T, n_repetitions = 100):
                 
         return lifespans
     
+    assert isinstance(p, float) and 0 <= p <= 1, "The given density p should be a float between 0 and 1"
+    assert isinstance(L, int) and L > 0, "The length L should be a positive integer"
+    assert isinstance(T, int) and T > 0, "The time T should be a positive integer"
+    assert isinstance(n_repetitions, int) and n_repetitions > 0, "The amount of times the model is ran n_repitions should be an integer larger than 0"
+
     total_lifespans = []
     total_jam_sizes = []
-
     for _ in range(n_repetitions):
         initial_state = gen_initial_state_bernoulli(L, p)
         random_walk = initial_to_random_walk(initial_state)
@@ -201,6 +205,7 @@ def run_model_stochastic(p, L, T, n_repetitions=100, v_max=5, p_slowdown=0.1, tr
     - jam_counter (Counter): A counter with the sizes of all the jams found in the evolutions of the model.
     - all_evolutions (list): A list containing the evolution of the model for every repetition. Only returned if return_evolutions is True.
     """
+
     
     def initial_state_nasch(L, p, v_max):
         """
@@ -292,6 +297,16 @@ def run_model_stochastic(p, L, T, n_repetitions=100, v_max=5, p_slowdown=0.1, tr
                 next_state[i + velocity] = (True, velocity)
 
         return current_state, next_state
+
+    assert isinstance(p, float) and 0 <= p <= 1, "The given density p should be a float between 0 and 1"
+    assert isinstance(L, int) and L > 0, "The length L should be a positive integer"
+    assert isinstance(T, int) and T > 0, "The time T should be a positive integer"
+    assert isinstance(v_max, int) and v_max > 0, "The maximum speed v_max should be an integer larger than 0"
+    assert isinstance(p_slowdown, float) and 0 <= p_slowdown <= 1,  "The given slowing down probability p_slowdown should be a float between 0 and 1"
+    assert isinstance(neighbourhood_size, int) and neighbourhood_size > 0, "The neighborhood size neighborhood_size should be an integer larger than 0"
+    assert isinstance(entry_chance, float) and 0 <= entry_chance <= 1, "The given chance of entry entry_chance should be a float between 0 and 1"
+    assert isinstance(exit_chance, float) and 0 <= exit_chance <= 1, "The given chance of entry entry_chance should be a float between 0 and 1"
+
 
     total_lifespans = []
     total_jam_sizes = []
@@ -428,6 +443,12 @@ def find_critical_dataframe_nasch(p_slowdown_values, v_max_values, p_values, L, 
     Returns:
     - critical_densities (pandas.DataFrame): A dataframe with the critical densities for every combination of p_slowdown and v_max.
     """
+    assert isinstance(p_slowdown_values, list),  "The list of p_slowdown values to run the model for p_values should be a list"
+    assert isinstance(v_max_values, list), "The list of v_max values to run the model for p_values should be a list"
+    assert isinstance(p_values, list), "The list of density values to run the model for p_values should be a list"
+    assert isinstance(L, int) and L > 0, "The length L should be a positive integer"
+    assert isinstance(T, int) and T > 0, "The time T should be a positive integer"
+    assert isinstance(n, int) and n > 0, "The number of repititions n should be an integer larger than 0"
 
     # Create a list with inputs for the critical_density_wrapper function
     args = []
