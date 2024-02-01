@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from tqdm import tqdm
 from collections import Counter
+import powerlaw
 
 def find_jams(evolution, add_lifespans = False):
     def dfs(i, j, cluster):
@@ -72,60 +73,8 @@ def test_new_jam_finder():
     # plot the car evolution
     fig, ax = plt.subplots(figsize=(12, 6))  # Adjust the size as needed
     cpl.plot(np.array(evolution), colormap='GnBu')
-    
-    
 
-def gen_initial_state_bernoulli(L, p):
-    """
-    Generate a random initial state for the cellular automaton. Bernoulli distribution.
-
-    Returns:
-    list: Initial state.
-    """
-    assert p >= 0 and p <= 1, "p must be between 0 and 1"
-    assert L > 0, "L must be greater than 0"
-
-    initial_state = np.array([[np.random.choice([0, 1], p=[1 - p, p]) for i in range(L)]])
-    return initial_state
-
-def initial_to_random_walk(initial_state):
-    # Plot the random walk that is the initial state, go up for 1, down for 0
-    L = len(initial_state[0])
-    random_walk = [0] * L
-    for i in range(L):
-        if initial_state[0][i] == 1:
-            random_walk[i] = random_walk[i-1] + 1
-        else:
-            random_walk[i] = random_walk[i-1] - 1
-    return random_walk
-
-def jam_lifespans(initial_random_walk):
-    # Find the lifespans of the jams based on the random walk of the initial state (see initial_to_random_walk). For every value in the random walk, find the next occurrence of that value and calculate the lifespan based on this return time.
-    
-    lifespans = []
-
-    for i in range(len(initial_random_walk) - 1):
-        value = initial_random_walk[i]
-
-        # If the next value is higher, we can't calculate the lifespan of a jam from here.
-        if value < initial_random_walk[i + 1]:
-            continue
-        
-        # Find the first next occurrence of the value
-        try:
-            next_occurrence = initial_random_walk[i + 1:].index(value) + i + 1
-            assert initial_random_walk[next_occurrence] == value, "The next occurrence is not the same as the value we are looking for"
-        
-        except ValueError:
-            continue
-        
-        
-        lifespan = (next_occurrence - i)/2
-        
-        if lifespan > 1:
-            lifespans.append(lifespan)
-            
-    return lifespans
+    return None
 
 def triangulize_evolution(evolution):
     """
@@ -153,6 +102,59 @@ def run_model(p, L, T, n_repetitions = 100):
     - lifespan_counter (Counter): A counter with the lifespans of all the jams found in the evolutions of the CA.
     - jam_counter (Counter): A counter with the sizes of all the jams found in the evolutions of the CA.
     """
+
+    def gen_initial_state_bernoulli(L, p):
+        """
+        Generate a random initial state for the cellular automaton. Bernoulli distribution.
+
+        Returns:
+        list: Initial state.
+        """
+        assert p >= 0 and p <= 1, "p must be between 0 and 1"
+        assert L > 0, "L must be greater than 0"
+
+        initial_state = np.array([[np.random.choice([0, 1], p=[1 - p, p]) for i in range(L)]])
+        return initial_state
+    
+    def initial_to_random_walk(initial_state):
+        # Plot the random walk that is the initial state, go up for 1, down for 0
+        L = len(initial_state[0])
+        random_walk = [0] * L
+        for i in range(L):
+            if initial_state[0][i] == 1:
+                random_walk[i] = random_walk[i-1] + 1
+            else:
+                random_walk[i] = random_walk[i-1] - 1
+        return random_walk
+    
+    def jam_lifespans(initial_random_walk):
+        # Find the lifespans of the jams based on the random walk of the initial state (see initial_to_random_walk). For every value in the random walk, find the next occurrence of that value and calculate the lifespan based on this return time.
+        
+        lifespans = []
+
+        for i in range(len(initial_random_walk) - 1):
+            value = initial_random_walk[i]
+
+            # If the next value is higher, we can't calculate the lifespan of a jam from here.
+            if value < initial_random_walk[i + 1]:
+                continue
+            
+            # Find the first next occurrence of the value
+            try:
+                next_occurrence = initial_random_walk[i + 1:].index(value) + i + 1
+                assert initial_random_walk[next_occurrence] == value, "The next occurrence is not the same as the value we are looking for"
+            
+            except ValueError:
+                continue
+            
+            
+            lifespan = (next_occurrence - i)/2
+            
+            if lifespan > 1:
+                lifespans.append(lifespan)
+                
+        return lifespans
+    
     total_lifespans = []
     total_jam_sizes = []
 
@@ -172,96 +174,6 @@ def run_model(p, L, T, n_repetitions = 100):
     jam_counter = Counter(total_jam_sizes)
     return lifespan_counter, jam_counter
 
-def initial_state_nasch(L, p, v_max):
-    """
-    Function to generate an initial state for the NaSch model. It returns the initial state of the CA.
-
-    Parameters:
-    - L (int): The length of the CA.
-    - p (float): The probability of a cell being 1 in the initial state.
-    - v_max (int): Maximum speed of vehicles.
-
-    Returns:
-    - initial_state (list): The initial state of the CA. It contains a tuple for every cell, with the first element indicating whether the cell is occupied and the second element indicating the speed of the vehicle.
-    """
-    initial_state = [(False, 0) if random.random() > p else (True, random.randint(1, v_max)) for _ in range(L)]
-    return initial_state
-
-def nasch_step(current_state, v_max, p_slowdown, dynamic_model=False, neighbourhood_size=1, entry_chance=0.5, exit_chance=0.5):
-    """
-    Function to perform a single timestep of the NaSch model. It returns the next state of the CA. Start with the potential dynamics of the model.
-    Then perform the acceleration, slowing down, randomization and movement steps.
-
-    Parameters:
-    - current_state (list): The current state of the CA. It contains a tuple for every cell, with the first element indicating whether the cell is occupied and the second element indicating the speed of the vehicle.
-    - v_max (int): Maximum speed of vehicles.
-    - p_slowdown (float): Probability of slowing down.
-    - dynamic_model (bool): Whether or not to use the dynamic model.
-    - neighbourhood_size (int): The size of the neighbourhood for the dynamic model. Number of cars in front of cell that influences entry or exit probability.
-    - entry_chance (float): The probability of a car entering in a completely empty neighbourhood (scales down with fuller neighbourhoods).
-    - exit_chance (float): The probability of a car exiting in a completely full neighbourhood (scales down with emptier neighbourhoods).
-
-    Returns:
-    - next_state (list): The next state of the CA. Same format as current_state.
-    """
-
-    # Start with the potential dynamics of the model (influx and outflux):
-    if dynamic_model:
-        # Loop over cells from left to right, that way newly changed cells don't influence the next cells
-        for i, (car_present, velocity) in enumerate(current_state):
-            neighbourhood_density = np.mean([current_state[(i + j) % len(current_state)][0] for j in range(neighbourhood_size)])
-            
-            # If the cell is empty, there is a chance that a car enters, car has random speed between 1 and v_max
-            if not car_present and random.random() < entry_chance * (1 - neighbourhood_density):
-                # print(f"Car appeared at {i}, had probability {entry_chance * (1 - neighbourhood_density)}")
-                current_state[i] = (True, random.randint(1, v_max))
-                
-            # If the cell is occupied, there is a chance that a car exits
-            elif car_present and random.random() < exit_chance * neighbourhood_density:
-                # print(f"Car disappeared at {i}, had probability {exit_chance * neighbourhood_density}")
-                current_state[i] = (False, 0)
-
-    # Acceleration: Increase the speed of each vehicle by 1, up to the maximum speed
-    current_state = [(x[0], min(x[1] + 1, v_max)) for x in current_state]
-
-    # Slowing down: Check the distance to the next vehicle, and reduce the speed to that distance if it is smaller than the current speed
-    for i, (car_present, velocity) in enumerate(current_state):
-        if not car_present:
-            continue
-
-        distance_to_next_car = 0
-        for j in range(i + 1, len(current_state) + 1 + v_max):
-            # If we reach the end of the road, we check for cars at the beginning of the road
-            if j >= len(current_state):
-                # Check for cars at the beginning of the road
-                if current_state[j - len(current_state)][0]:
-                    break
-            # If we find a car, we stop counting
-            elif current_state[j][0]:
-                break
-           
-            distance_to_next_car += 1
-        
-        # Reduce the speed to the distance to the next car if it is smaller than the current speed
-        current_state[i] = (current_state[i][0], min(distance_to_next_car, current_state[i][1]))
-    
-    # Randomization: Reduce the speed of each vehicle by 1 with probability p_slowdown
-    current_state = [(x[0], max(x[1] - 1, 0) if random.random() < p_slowdown else x[1]) for x in current_state]
-
-    # Movement: Move each vehicle forward by its speed
-    next_state = [(False, 0)] * len(current_state)
-    for i, (car_present, velocity) in enumerate(current_state):
-        # If there is no car in the cell, we don't have to do anything
-        if not car_present:
-            continue
-        
-        # If the car is at the end of the road, it re-enters at the beginning
-        if i + velocity >= len(current_state):
-            next_state[i + velocity - len(current_state)] = (True, velocity)
-        else:
-            next_state[i + velocity] = (True, velocity)
-
-    return current_state, next_state
             
 
 #changed run model function introducing stochasticity/dynamics Influx=Outflux 
@@ -289,6 +201,98 @@ def run_model_stochastic(p, L, T, n_repetitions=100, v_max=5, p_slowdown=0.1, tr
     - jam_counter (Counter): A counter with the sizes of all the jams found in the evolutions of the model.
     - all_evolutions (list): A list containing the evolution of the model for every repetition. Only returned if return_evolutions is True.
     """
+    
+    def initial_state_nasch(L, p, v_max):
+        """
+        Function to generate an initial state for the NaSch model. It returns the initial state of the CA.
+
+        Parameters:
+        - L (int): The length of the CA.
+        - p (float): The probability of a cell being 1 in the initial state.
+        - v_max (int): Maximum speed of vehicles.
+
+        Returns:
+        - initial_state (list): The initial state of the CA. It contains a tuple for every cell, with the first element indicating whether the cell is occupied and the second element indicating the speed of the vehicle.
+        """
+        initial_state = [(False, 0) if random.random() > p else (True, random.randint(1, v_max)) for _ in range(L)]
+        return initial_state
+
+    def nasch_step(current_state, v_max, p_slowdown, dynamic_model=False, neighbourhood_size=1, entry_chance=0.5, exit_chance=0.5):
+        """
+        Function to perform a single timestep of the NaSch model. It returns the next state of the CA. Start with the potential dynamics of the model.
+        Then perform the acceleration, slowing down, randomization and movement steps.
+
+        Parameters:
+        - current_state (list): The current state of the CA. It contains a tuple for every cell, with the first element indicating whether the cell is occupied and the second element indicating the speed of the vehicle.
+        - v_max (int): Maximum speed of vehicles.
+        - p_slowdown (float): Probability of slowing down.
+        - dynamic_model (bool): Whether or not to use the dynamic model.
+        - neighbourhood_size (int): The size of the neighbourhood for the dynamic model. Number of cars in front of cell that influences entry or exit probability.
+        - entry_chance (float): The probability of a car entering in a completely empty neighbourhood (scales down with fuller neighbourhoods).
+        - exit_chance (float): The probability of a car exiting in a completely full neighbourhood (scales down with emptier neighbourhoods).
+
+        Returns:
+        - next_state (list): The next state of the CA. Same format as current_state.
+        """
+
+        # Start with the potential dynamics of the model (influx and outflux):
+        if dynamic_model:
+            # Loop over cells from left to right, that way newly changed cells don't influence the next cells
+            for i, (car_present, velocity) in enumerate(current_state):
+                neighbourhood_density = np.mean([current_state[(i + j) % len(current_state)][0] for j in range(neighbourhood_size)])
+                
+                # If the cell is empty, there is a chance that a car enters, car has random speed between 1 and v_max
+                if not car_present and random.random() < entry_chance * (1 - neighbourhood_density):
+                    # print(f"Car appeared at {i}, had probability {entry_chance * (1 - neighbourhood_density)}")
+                    current_state[i] = (True, random.randint(1, v_max))
+                    
+                # If the cell is occupied, there is a chance that a car exits
+                elif car_present and random.random() < exit_chance * neighbourhood_density:
+                    # print(f"Car disappeared at {i}, had probability {exit_chance * neighbourhood_density}")
+                    current_state[i] = (False, 0)
+
+        # Acceleration: Increase the speed of each vehicle by 1, up to the maximum speed
+        current_state = [(x[0], min(x[1] + 1, v_max)) for x in current_state]
+
+        # Slowing down: Check the distance to the next vehicle, and reduce the speed to that distance if it is smaller than the current speed
+        for i, (car_present, velocity) in enumerate(current_state):
+            if not car_present:
+                continue
+
+            distance_to_next_car = 0
+            for j in range(i + 1, len(current_state) + 1 + v_max):
+                # If we reach the end of the road, we check for cars at the beginning of the road
+                if j >= len(current_state):
+                    # Check for cars at the beginning of the road
+                    if current_state[j - len(current_state)][0]:
+                        break
+                # If we find a car, we stop counting
+                elif current_state[j][0]:
+                    break
+            
+                distance_to_next_car += 1
+            
+            # Reduce the speed to the distance to the next car if it is smaller than the current speed
+            current_state[i] = (current_state[i][0], min(distance_to_next_car, current_state[i][1]))
+        
+        # Randomization: Reduce the speed of each vehicle by 1 with probability p_slowdown
+        current_state = [(x[0], max(x[1] - 1, 0) if random.random() < p_slowdown else x[1]) for x in current_state]
+
+        # Movement: Move each vehicle forward by its speed
+        next_state = [(False, 0)] * len(current_state)
+        for i, (car_present, velocity) in enumerate(current_state):
+            # If there is no car in the cell, we don't have to do anything
+            if not car_present:
+                continue
+            
+            # If the car is at the end of the road, it re-enters at the beginning
+            if i + velocity >= len(current_state):
+                next_state[i + velocity - len(current_state)] = (True, velocity)
+            else:
+                next_state[i + velocity] = (True, velocity)
+
+        return current_state, next_state
+
     total_lifespans = []
     total_jam_sizes = []
 
@@ -494,13 +498,8 @@ def visualize_jam_counter(jam_counter, fit_line = False):
 
 def find_density(L, p, n, v_max, p_slowdown, dynamic_model, neighbourhood_size, entry_chance, exit_chance):
     T = int(L)
+
     #find evolution
-    current_state = initial_state_nasch(L=L, p=p, v_max=v_max)
-
-    evolution = nasch_step(current_state, v_max=v_max, p_slowdown=p_slowdown, 
-                        dynamic_model=True, neighbourhood_size=neighbourhood_size, 
-                        entry_chance=entry_chance, exit_chance=exit_chance)
-
     evolutions = run_model_stochastic(p=p, L=L, T=T, n_repetitions=n, v_max=v_max, p_slowdown=p_slowdown, 
                                         return_evolutions=True, dynamic_model=dynamic_model, neighbourhood_size=neighbourhood_size,
                                         entry_chance=entry_chance, exit_chance=exit_chance)[2]
