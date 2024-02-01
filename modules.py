@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from tqdm import tqdm
 from collections import Counter
+from collections.abc import Iterable
 import powerlaw
 
 def find_jams(evolution, add_lifespans = False):
@@ -443,9 +444,9 @@ def find_critical_dataframe_nasch(p_slowdown_values, v_max_values, p_values, L, 
     Returns:
     - critical_densities (pandas.DataFrame): A dataframe with the critical densities for every combination of p_slowdown and v_max.
     """
-    assert isinstance(p_slowdown_values, list),  "The list of p_slowdown values to run the model for p_values should be a list"
-    assert isinstance(v_max_values, list), "The list of v_max values to run the model for p_values should be a list"
-    assert isinstance(p_values, list), "The list of density values to run the model for p_values should be a list"
+    assert isinstance(p_slowdown_values, Iterable),  "The list of p_slowdown values to run the model for p_values should be a list"
+    assert isinstance(v_max_values, Iterable), "The list of v_max values to run the model for p_values should be a list"
+    assert isinstance(p_values, Iterable), "The list of density values to run the model for p_values should be a list"
     assert isinstance(L, int) and L > 0, "The length L should be a positive integer"
     assert isinstance(T, int) and T > 0, "The time T should be a positive integer"
     assert isinstance(n, int) and n > 0, "The number of repititions n should be an integer larger than 0"
