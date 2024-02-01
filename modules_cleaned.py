@@ -561,3 +561,16 @@ def analyze_critical_exponent_for_density(p, L, T, n_repetitions, v_max, p_slowd
     result, exponent = analyze_powerlaw_distribution(list(jam_counter.elements()))
     
     return p, exponent
+
+def density_evolution_nasch (evolution):
+    """
+    Function to calculate the density evolution of the NaSch model. The density is defined as the
+    amount of cars in total. This is calculated by summing the total amount of cars.
+    Input: 
+    - evolution (list): List containing the evolution of the model for each timestep.
+    Output:
+    - density_evolution (list): List containing the density evolution of the model for each timestep.
+    """
+    location_evolution = [[x[0] for x in line] for line in evolution]
+    density_evolution = [np.sum(line) / len(line) for line in location_evolution]
+    return density_evolution
