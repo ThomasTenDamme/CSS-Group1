@@ -156,7 +156,7 @@ def run_model(p, L, T, n_repetitions = 100):
                 
         return lifespans
     
-    assert isinstance(p, float) and 0 <= p <= 1, "The given density p should be a float between 0 and 1"
+    assert isinstance(p, (int, float)) and 0 <= p <= 1, "The given density p should be a float between 0 and 1"
     assert isinstance(L, int) and L > 0, "The length L should be a positive integer"
     assert isinstance(T, int) and T > 0, "The time T should be a positive integer"
     assert isinstance(n_repetitions, int) and n_repetitions > 0, "The amount of times the model is ran n_repitions should be an integer larger than 0"
@@ -299,14 +299,14 @@ def run_model_stochastic(p, L, T, n_repetitions=100, v_max=5, p_slowdown=0.1, tr
 
         return current_state, next_state
 
-    assert isinstance(p, float) and 0 <= p <= 1, "The given density p should be a float between 0 and 1"
+    assert isinstance(p, (int, float)) and 0 <= p <= 1, "The given density p should be a float between 0 and 1"
     assert isinstance(L, int) and L > 0, "The length L should be a positive integer"
     assert isinstance(T, int) and T > 0, "The time T should be a positive integer"
     assert isinstance(v_max, int) and v_max > 0, "The maximum speed v_max should be an integer larger than 0"
-    assert isinstance(p_slowdown, float) and 0 <= p_slowdown <= 1,  "The given slowing down probability p_slowdown should be a float between 0 and 1"
+    assert isinstance(p_slowdown, (int, float)) and 0 <= p_slowdown <= 1,  "The given slowing down probability p_slowdown should be a float between 0 and 1"
     assert isinstance(neighbourhood_size, int) and neighbourhood_size > 0, "The neighborhood size neighborhood_size should be an integer larger than 0"
-    assert isinstance(entry_chance, float) and 0 <= entry_chance <= 1, "The given chance of entry entry_chance should be a float between 0 and 1"
-    assert isinstance(exit_chance, float) and 0 <= exit_chance <= 1, "The given chance of entry entry_chance should be a float between 0 and 1"
+    assert isinstance(entry_chance, (int, float)) and 0 <= entry_chance <= 1, "The given chance of entry entry_chance should be a float between 0 and 1"
+    assert isinstance(exit_chance, (int, float)) and 0 <= exit_chance <= 1, "The given chance of entry entry_chance should be a float between 0 and 1"
 
 
     total_lifespans = []
