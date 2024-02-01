@@ -512,3 +512,52 @@ def find_density(L, p, n, v_max, p_slowdown, dynamic_model, neighbourhood_size, 
     density_evolution = [np.sum(line) / len(line) for line in location_evolution]#      #List containing the density evolution of the model for each timestep.
     
     return density_evolution
+
+def analyze_powerlaw_distribution(data):
+    """
+    Function that analysis the distribution of given data with the powerlaw package.
+    Makes use of the Kolmogorov-Smirnov test which returns R-log likelihood (ks_stat) and p-value (ks_p_value). 
+    p-value/ks_p_value > 0.05 means that the data is likely to be drawn from the same distribution.
+    R/ks_stat <0  means the data is drawn from a exponential distribution
+    R/ks_stat >0 means the data is drawn from a power law distribution 
+
+
+    Input: data (array-like)
+    Output: string with distribution type
+
+    """
+    #Make data in array format
+    data = np.asarray(data)
+
+    #Fit to a power-law distribution
+    fit = powerlaw.Fit(data, discrete=True)
+
+    #Goodness of fit using the Kolmogorov-Smirnov test for power-law vs. exponential
+    distr1 = "power_law"
+    distr2 = "exponential"
+    ks_stat, ks_p_value = fit.distribution_compare(distr1, distr2, normalized_ratio=True)
+    exponent = fit.power_law.alpha
+    
+
+    # Analyze the fit and return the result
+    if ks_stat > 0:
+        # R log likelihood was positive, so data prefers power-law distribution
+        result = f"Data prefers {distr1} over {distr2} (p-value: {ks_p_value:.4f})"
+
+    else:
+        # R log likelihood was negative, so data prefers exponential distribution
+        result = f"Data prefers {distr2} over {distr1} (p-value: {ks_p_value:.4f})"
+
+    return result, exponent
+
+# A power-law distribution for a given initial density
+def analyze_critical_exponent_for_density(p, L, T, n_repetitions, v_max, p_slowdown, triangular, dynamic_model, neighbourhood_size, entry_chance, exit_chance):
+    """Function that saves the critical exponent for a initial density."""
+
+    # Nasch model
+    lifespan_counter, jam_counter = run_model_stochastic(p, L, T, n_repetitions, v_max, p_slowdown, triangular, return_evolutions=False, dynamic_model=dynamic_model, neighbourhood_size=neighbourhood_size, entry_chance=entry_chance, exit_chance=exit_chance)
+    
+    # Previous defined analyze_powerlaw_distribution function 
+    result, exponent = analyze_powerlaw_distribution(list(jam_counter.elements()))
+    
+    return p, exponent
