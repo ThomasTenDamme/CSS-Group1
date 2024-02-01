@@ -1,0 +1,8 @@
+cellpylib==2.4.0
+imageio==2.33.1
+matplotlib==3.8.0
+numpy==1.26.3
+pandas==2.2.0
+powerlaw==1.5
+scipy==1.12.0
+tqdm==4.66.1
