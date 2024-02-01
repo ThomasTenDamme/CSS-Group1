@@ -48,7 +48,7 @@ run_model_stochastic(p=0.5, L=100, T=50, n_repetitions=100, v_max=5, p_slowdown=
   Calculates the total flow of the NaSch model, defined as the sum of speeds of all vehicles over every timestep.
 
 - **calculate_delay_nasch(evolution, v_max):**
-  Calculates the total delay of the NaSch model, defined as the sum of the differences between v_max and the exact speed of each vehicle.
+  Calculates the average delay of the NaSch model, defined as the average of the differences between v_max and the exact speed of each vehicle.
 
 - **critical_density_wrapper(args):**
   Runs the model with a single argument, suitable for concurrent execution, to find the critical density.
