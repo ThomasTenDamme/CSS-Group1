@@ -108,99 +108,7 @@ def triangulize_evolution(evolution):
         for x in range(len(evolution[y])):
             if y > x or y > L-x:
                 evolution[y][x] = 0
-    return evolution
-
-# def run_model(p, L, T, n_repetitions = 100):
-#     """
-#     Function to run the CA rule 184 model for a given p, L and T. It returns the lifespans and jam sizes of all the jams found in the evolution of the CA.
-    
-#     Parameters:
-#     - p (float): The probability of a cell being 1 in the initial state.
-#     - L (int): The length of the CA.
-#     - T (int): The number of timesteps.
-#     - n_repetitions (int): The number of times the model should be run.
-    
-#     Returns:
-#     - lifespan_counter (Counter): A counter with the lifespans of all the jams found in the evolutions of the CA.
-#     - jam_counter (Counter): A counter with the sizes of all the jams found in the evolutions of the CA.
-#     """
-
-#     def gen_initial_state_bernoulli(L, p):
-#         """
-#         Generate a random initial state for the cellular automaton. Bernoulli distribution.
-
-#         Returns:
-#         list: Initial state.
-#         """
-#         assert p >= 0 and p <= 1, "p must be between 0 and 1"
-#         assert L > 0, "L must be greater than 0"
-
-#         initial_state = np.array([[np.random.choice([0, 1], p=[1 - p, p]) for i in range(L)]])
-#         return initial_state
-    
-#     def initial_to_random_walk(initial_state):
-#         # Plot the random walk that is the initial state, go up for 1, down for 0
-#         L = len(initial_state[0])
-#         random_walk = [0] * L
-#         for i in range(L):
-#             if initial_state[0][i] == 1:
-#                 random_walk[i] = random_walk[i-1] + 1
-#             else:
-#                 random_walk[i] = random_walk[i-1] - 1
-#         return random_walk
-    
-#     def jam_lifespans(initial_random_walk):
-#         # Find the lifespans of the jams based on the random walk of the initial state (see initial_to_random_walk). For every value in the random walk, find the next occurrence of that value and calculate the lifespan based on this return time.
-        
-#         lifespans = []
-
-#         for i in range(len(initial_random_walk) - 1):
-#             value = initial_random_walk[i]
-
-#             # If the next value is higher, we can't calculate the lifespan of a jam from here.
-#             if value < initial_random_walk[i + 1]:
-#                 continue
-            
-#             # Find the first next occurrence of the value
-#             try:
-#                 next_occurrence = initial_random_walk[i + 1:].index(value) + i + 1
-#                 assert initial_random_walk[next_occurrence] == value, "The next occurrence is not the same as the value we are looking for"
-            
-#             except ValueError:
-#                 continue
-            
-            
-#             lifespan = (next_occurrence - i)/2
-            
-#             if lifespan > 1:
-#                 lifespans.append(lifespan)
-                
-#         return lifespans
-    
-#     assert isinstance(p, float) and 0 <= p <= 1, "The given density p should be a float between 0 and 1"
-#     assert isinstance(L, int) and L > 0, "The length L should be a positive integer"
-#     assert isinstance(T, int) and T > 0, "The time T should be a positive integer"
-#     assert isinstance(n_repetitions, int) and n_repetitions > 0, "The amount of times the model is ran n_repitions should be an integer larger than 0"
-
-#     total_lifespans = []
-#     total_jam_sizes = []
-#     for _ in range(n_repetitions):
-#         initial_state = gen_initial_state_bernoulli(L, p)
-#         random_walk = initial_to_random_walk(initial_state)
-#         cellular_automaton = cpl.evolve(initial_state, timesteps=T, memoize=True, apply_rule=lambda n, c, t: cpl.nks_rule(n, rule=184))
-#         cellular_automaton = triangulize_evolution(cellular_automaton)
-
-#         lifespans = jam_lifespans(random_walk)
-#         total_lifespans += lifespans
-        
-#         jam_sizes = find_jams(cellular_automaton)
-#         total_jam_sizes += jam_sizes
-    
-#     lifespan_counter = Counter(total_lifespans)
-#     jam_counter = Counter(total_jam_sizes)
-#     return lifespan_counter, jam_counter
-
-            
+    return evolution            
 
 #changed run model function introducing stochasticity/dynamics Influx=Outflux 
 def run_model_stochastic(p, L, T, n_repetitions=100, v_max=5, p_slowdown=0.1, triangular=False, return_evolutions=False, 
@@ -503,41 +411,6 @@ def find_critical_dataframe_nasch(p_slowdown_values, v_max_values, p_values, L, 
     })
 
     return output_df
-
-# def visualize_jam_counter(jam_counter, fit_line = False):
-#     plt.figure(figsize=(12,6))
-#     plt.title(f'Jam Sizes')
-#     plt.loglog(range(1, int(max(jam_counter.keys()))), [jam_counter[i] for i in range(1, int(max(jam_counter.keys())))], 'o')
-#     plt.xlabel('Jam size')
-#     plt.ylabel('Number of jams')
-
-#     if fit_line:
-#         lists = sorted(jam_counter.items())
-#         x, y = zip(*lists)
-#         x_log, y_log = np.log(x), np.log(y)
-
-#         # Fit linear function to log-log data   
-#         def func(x, a, b):
-#             return -a * x + b
-        
-#         def power_law_func(x, a, b):
-#             return a * x ** -b
-
-#         popt, _ = scipy.optimize.curve_fit(func, x_log, y_log, p0=[1, 0.5])
-#         a_optimal, b_optimal = popt
-
-#         # plot the fitted line
-#         plt.plot(x, power_law_func(x, np.exp(b_optimal), a_optimal), label=f'Linear fit on log-log data: y = {np.exp(b_optimal):.2f}x^-{a_optimal:.2f}')
-
-#         # Fit power-law function
-#         popt, _ = scipy.optimize.curve_fit(power_law_func, x, y, p0=[1, 0.5])
-#         a_optimal, b_optimal = popt
-
-#         # plot the fitted line
-#         plt.plot(x, power_law_func(x, a_optimal, b_optimal), label=f'Power-law fit: y = {a_optimal:.2f}x^-{b_optimal:.2f}')
-
-#     plt.legend()
-#     plt.show()
 
 def find_density(L, p, n, v_max, p_slowdown, dynamic_model, neighbourhood_size, entry_chance, exit_chance):
     """
