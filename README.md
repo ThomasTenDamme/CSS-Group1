@@ -3,7 +3,18 @@
 
 For the course Complex System Simulation from the Master's Computational Science (joint degree) at the University of Amsterdam and Vrije Universiteit Amsterdam our group explored the properties which would implicate self organized criticality of a 1D dynamic implementation of the Nasch Model.
 
-Our module uses % assert statements
+
+## Git-fame work distribution table
+| Author    |   loc |   coms |   fils |  distribution   |
+|:----------|------:|-------:|-------:|:----------------|
+| Jenna     | 50443 |     27 |     17 | 73.5/22.0/32.1  |
+| Lingfeng  | 14052 |     15 |     13 | 20.5/12.2/24.5  |
+| Caro      |  2338 |     41 |     13 | 3.4/33.3/24.5   |
+| Thomas    |  1817 |     40 |     10 | 2.6/32.5/18.9   |
+
+
+## Assert usage
+Our modules.py file contains 5.7% assert statements (19 assert statements / 335 lines of code)
 
 ## Installation
 Use the following command to install dependencies:
